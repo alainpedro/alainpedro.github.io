@@ -22,9 +22,9 @@
          v-model="credentials.password"
        >
      </div>
-     <button class="btn btn-primary" @click="submit()">Zaloguj</button>
+     <button class="btn btn-primary" @click="submit()">Login</button>
      <router-link to="/register">
-       <button class="btn btn-primary relative">Rejestracja</button>
+       <button class="btn btn-primary relative">Sign up</button>
      </router-link>
    </div>
   </div>

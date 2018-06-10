@@ -21,6 +21,12 @@ const myRouter = new Router({
 
   routes: [
     {
+      path: '/',
+      name: 'Home',
+      component: Home,
+      meta: { auth: true }
+    },
+    {
       path: '/Home',
       name: 'Home',
       component: Home,

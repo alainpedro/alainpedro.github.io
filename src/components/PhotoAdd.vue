@@ -61,14 +61,8 @@
     data() {
       return {
         center: {lat: 52.2296756, lng: 21.012228700000037},
-        markers: [
-          {position: {lat: 52.2296756, lng: 21.012228700000037}, label: {text: "1", color: 'black'}},
-          {position: {lat: 52.2127689, lng: 20.955688099999975}, label: {text: "2", color: 'black'}},
-        ],
-        path: [
-          {lat: 52.2296756, lng: 21.012228700000037},
-          {lat: 52.2127689, lng: 20.955688099999975}
-        ],
+        markers: [        ],
+        path: [        ],
         places: [],
         currentPlace: null,
         pointId: "",
@@ -99,7 +93,7 @@
                   lat: point.latitudecoord_x,
                   lng: point.longitudecoord_y
                 },
-                label: point.pointId.toString(),
+                label: (point.pointId+1).toString(),
               }
             )
           });
@@ -181,12 +175,18 @@
       clicker(index, markers) {
         var i;
         for (i = 0; i < markers.length; i++) { //odkolorowujemy poprzedni X
+          console.log(markers[i].label);
           if (markers[i].label.tmp != undefined) {
             markers[i].label = {text: markers[i].label.tmp, color: 'black'};
           }
         }
 
-        var tmp = markers[index].label.text; //kolorujemy kliknięty punkt
+        //kolorujemy kliknięty punkt
+        if(markers[index].label.text != undefined) {
+          var tmp = markers[index].label.text;
+        } else {
+          var tmp = markers[index].label;
+        }
         markers[index].label = {text: 'X', tmp: tmp, color: 'white'};
         this.pointId = index;//dodajemy punkt do danych
       }

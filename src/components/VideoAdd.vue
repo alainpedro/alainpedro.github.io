@@ -1,9 +1,46 @@
 <template>
-  <div class="videoAdd col-sm-6 col-sm-offset-3">
-    <div class="panel panel-default">
+  <div class="videoAdd col-sm-8 col-sm-offset-2">
+    <div class="panel panel-default" style="margin-top:10px;">
       <div class="panel-heading">Add video</div>
       <div class="panel-body">
-        <vue-form-generator :schema="schema" :model="model" :options="formOptions"></vue-form-generator>
+        <div class="vue-form-generator">
+          <fieldset>
+            <div class="form-group valid field-mapinput"><label for="choose-the-point">Choose the point</label>
+              <div class="field-wrap">
+
+                <gmap-map
+                  :center="center"
+                  :zoom="12"
+                  style="width:100%;  height: calc(100vh - 460px)"
+                >
+                  <GmapPolyline v-if="path" :path="path"/>
+                  <gmap-marker
+                    :key="index"
+                    v-for="(m, index) in markers"
+                    :position="markers[index].position"
+                    :label="markers[index].label"
+                    :clickable="true"
+                    @click="clicker(index, markers)"
+                  ></gmap-marker>
+                </gmap-map>
+
+              </div>
+            </div>
+            <div class="form-group valid required field-upload"><label for="file">Video file</label>
+              <div class="field-wrap">
+                <div class="wrapper">
+
+                  <input id="file" type="file" name="file" @change="loadFile" required="required" class="form-control">
+                </div>
+              </div>
+            </div>
+            <div class="form-group valid field-submit">
+              <div class="field-wrap" style="display:block">
+                <input id="subinput" type="submit" value="Submit" @click="submitForm()">
+              </div>
+            </div>
+          </fieldset>
+        </div>
       </div>
     </div>
   </div>
@@ -11,9 +48,10 @@
 
 <script>
   import auth from '../auth'
-  import router from '../router/index.js';
   import VueFormGenerator from "vue-form-generator";
   import "vue-form-generator/dist/vfg.css";
+  import * as axios from 'axios';
+
 
   export default {
     name: 'videoAdd',
@@ -22,57 +60,64 @@
     },
     data() {
       return {
-        model: {
-          videoURL: "url"
-        },
-        schema: {
-          fields: [{
-            type: "input",
-            inputType: "text",
-            label: "ID",
-            model: "id",
-            readonly: true,
-            featured: false,
-            disabled: true
-          }, {
-            type: "input",
-            inputType: "text",
-            label: "taskId",
-            model: "taskId",
-            readonly: false,
-            featured: false,
-            disabled: false
-          }, {
-            type: "input",
-            inputType: "text",
-            label: "videoURL",
-            model: "videoURL",
-            readonly: false,
-            featured: true,
-            required: true,
-            disabled: false,
-            placeholder: "What is the video's adress?",
-            validator: VueFormGenerator.validators.string
-          },{
-            type: "submit",
-            buttonText: "Submit",
-            onSubmit: this.submitForm,
-            disabled() {
-              return this.errors.length > 0;
-            }
-          }
-          ]
-        },
-
-        formOptions: {
-          validateAfterLoad: true,
-          validateAfterChanged: true,
-          validateBeforeSubmit: true
-        }
+        center: {lat: 52.2296756, lng: 21.012228700000037},
+        markers: [        ],
+        path: [        ],
+        places: [],
+        currentPlace: null,
+        pointId: "",
+        file: "",
       };
     },
+    mounted() {
+      this.getData();
 
+    },
     methods: {
+      loadFile: function(){
+        this.file = document.getElementById('file').files[0];
+      },
+
+      getData: function () {
+        var url = 'http://routeapi.azurewebsites.net/route/' + this.$parent.$data.actualtripId + '/point';
+        this.$http.get(url, {
+          headers: auth.getAuthHeader()
+        }).then(function (data) {
+          this.points = data.body.points;
+
+          var tab = [];
+          this.points.forEach(function (point) {
+            tab.push(
+              {
+                position: {
+                  lat: point.latitudecoord_x,
+                  lng: point.longitudecoord_y
+                },
+                label: (point.pointId+1).toString(),
+              }
+            )
+          });
+          this.markers = tab;
+          if (this.markers.length > 1) {
+            this.center = {lat: this.markers[0].position.lat, lng: this.markers[0].position.lng};
+          }
+          this.makePaths();
+        });
+      },
+
+      makePaths() {
+        var localpath = [];
+        this.markers.forEach(function (marker) {
+          localpath.push(
+            {
+              lat: marker.position.lat,
+              lng: marker.position.lng
+            },
+          )
+        });
+        this.path = localpath;
+      },
+
       prettyJSON: function (json) {
         if (json) {
           json = JSON.stringify(json, undefined, 4);
@@ -95,19 +140,59 @@
         }
       },
       submitForm: function () {
-        this.$http.put('https://morning-escarpment-49088.herokuapp.com/video/create', JSON.stringify(this.model), {
-          headers: auth.getAuthHeader(),
-          type:'PUT',
-          contentType: 'application/json; charset=utf-8',
-          dataType: 'json',
+        if (this.pointId === "") {
+          alert('You must choose a point!');
+          return;
+        }
+        if (!window.File || !window.FileReader || !window.FileList || !window.Blob) {
+          alert('The File APIs are not fully supported in this browser.');
+          return;
+        }
 
-        }).then(function () {
-        }), function (data) {
-          console.log(data);
-        };
-        router.push("/Home");
+        var input = document.getElementById("file");
+        if (!input) {
+          alert("Um, couldn't find the fileinput element.");
+        }
+        else if (!input.files) {
+          alert("This browser doesn't seem to support the `files` property of file inputs.");
+        }
+        else if (!input.files[0]) {
+          alert("Please select a file before clicking 'Load'");
+        }
+        else {
+          var data = new FormData();
+          data.append('file', this.file, this.file.name);
+          data.append('pointId', this.pointId);
+          var promise = axios.post('http://routeapi.azurewebsites.net/route/'+this.$parent.$data.actualtripId +'/video', data, {
+            headers: auth.getAuthHeader()
+          }).then(function (data) {
+            window.location.reload(true);
+          });
+        }
+
+      },
+      clicker(index, markers) {
+        var i;
+        for (i = 0; i < markers.length; i++) { //odkolorowujemy poprzedni X
+          console.log(markers[i].label);
+          if (markers[i].label.tmp != undefined) {
+            markers[i].label = {text: markers[i].label.tmp, color: 'black'};
+          }
+        }
+
+        //kolorujemy kliknięty punkt
+        if(markers[index].label.text != undefined) {
+          var tmp = markers[index].label.text;
+        } else {
+          var tmp = markers[index].label;
+        }
+        markers[index].label = {text: 'X', tmp: tmp, color: 'white'};
+        this.pointId = index;//dodajemy punkt do danych
       }
-    }
+    },
+
+
+
 
   }
 </script>

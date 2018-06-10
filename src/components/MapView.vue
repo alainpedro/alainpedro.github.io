@@ -19,11 +19,11 @@
       <gmap-info-window :options="infoOptions" :position="infoWindowPos" :opened="infoWinOpen"
                         @closeclick="infoWinOpen=false">
         <td v-for="(d, index) in infoContentPhotos">
-          <img class="minigallery" :src=d @click="clickPhoto(index)">
+          <img class="minigallery" :src=d.mini @click="clickPhoto(index,d)">
         </td>
         <div></div>
         <td v-for="(d, index) in infoContentVideos">
-          <img class="minigallery" :src=d @click="clickVideo(index)">
+          <img class="minigallery" :src=d.mini @click="clickVideo(index,d)">
         </td>
 
       </gmap-info-window>
@@ -38,51 +38,12 @@
     name: "MapView",
     data() {
       return {
-        points:[],
+        points: [],
         center: {lat: 52.2296756, lng: 21.012228700000037},
-        markers:[],
+        markers: [],
         path: [],
-        photos: [
-          {
-            pointId: 1,
-            mini: "https://cdn-dcp.avt.pl/i/images/6/8/8/_src_12688-jak_robic_ostre_zdjecia_01.jpg",
-            blob: "https://cdn-dcp.avt.pl/i/images/6/8/8/_src_12688-jak_robic_ostre_zdjecia_01.jpg"
-          },
-
-        ],
-        videos: [
-          {
-            pointId: 1,
-            mini: "https://cdn-dcp.avt.pl/i/images/6/8/8/_src_12688-jak_robic_ostre_zdjecia_01.jpg",
-            blob: "https://www.w3schools.com/html/mov_bbb.mp4"
-          },
-          {
-            pointId: 1,
-            mini: "https://cdn-dcp.avt.pl/i/images/6/8/8/_src_12688-jak_robic_ostre_zdjecia_01.jpg",
-            blob: "https://www.w3schools.com/html/mov_bbb.mp4"
-          },
-
-          {
-            pointId: 1,
-            mini: "https://cdn-dcp.avt.pl/i/images/6/8/8/_src_12688-jak_robic_ostre_zdjecia_01.jpg",
-            blob: "https://www.w3schools.com/html/mov_bbb.mp4"
-          },
-          {
-            pointId: 1,
-            mini: "https://cdn-dcp.avt.pl/i/images/6/8/8/_src_12688-jak_robic_ostre_zdjecia_01.jpg",
-            blob: "https://www.w3schools.com/html/mov_bbb.mp4"
-          },
-          {
-            pointId: 1,
-            mini: "https://cdn-dcp.avt.pl/i/images/6/8/8/_src_12688-jak_robic_ostre_zdjecia_01.jpg",
-            blob: "https://www.w3schools.com/html/mov_bbb.mp4"
-          },
-          {
-            pointId: 1,
-            mini: "https://cdn-dcp.avt.pl/i/images/6/8/8/_src_12688-jak_robic_ostre_zdjecia_01.jpg",
-            blob: "https://www.w3schools.com/html/mov_bbb.mp4"
-          },
-        ],
+        photos: [],
+        videos: [],
         places: [],
         currentPlace: null,
         infoContentPhotos: [],
@@ -123,20 +84,22 @@
             }).then(function (data) {
               point.photosId = data.body.photos;
               point.photosId.forEach(function (photosId) {
-                that.$http.get('http://routeapi.azurewebsites.net/route/' + that.$parent.$data.actualtripId + '/point/'
+
+                fetch('http://routeapi.azurewebsites.net/route/' + that.$parent.$data.actualtripId + '/point/'
                   + point.pointId + '/photo/' + photosId.id + '/thumbnail', {
                   headers: auth.getAuthHeader()
+                })
+                  .then((response) => response.blob())
+                  .then((blob) => {
+                    var imageUrl = URL.createObjectURL(blob);
+                    that.photos.push({pointId: point.pointId, photoId: photosId.id, mini: imageUrl});
+                    that.photos.sort(function(a, b){
+                      if(a.photoId < b.photoId) return -1;
+                      if(a.photoId > b.photoId) return 1;
+                      return 0;
+                    });
+                  });
 
-                }).then(function (data) {
-                  var blob = new Blob([data.body], {type: "image/png"});
-                  console.log(blob);
-                  var url = URL.createObjectURL(blob);
-                  var img = new Image();
-                  img.src = url;
-                  this.photos.push({point:point.pointId ,photosId: photosId.id,mini:img.src,blob: img.src});
-
-
-                });
 
 //                  route/{routeid}/point/{pointid}/photo/{photoid}/thumbnail
 
@@ -146,33 +109,66 @@
             });
           });
         });
+
+
       },
-        getData: function(){
-        var url = 'http://routeapi.azurewebsites.net/route/' +this.$parent.$data.actualtripId +'/point';
-        this.$http.get(url,{
+      getVideoList() {
+        var url = 'http://routeapi.azurewebsites.net/route/' + this.$parent.$data.actualtripId + '/point';
+        this.$http.get(url, {
+          headers: auth.getAuthHeader()
+        }).then(function (data) {
+          var points = data.body.points;
+          var that = this;
+          points.forEach(function (point) {
+            that.$http.get('http://routeapi.azurewebsites.net/route/' + that.$parent.$data.actualtripId + '/point/' + point.pointId + '/video', {
+              headers: auth.getAuthHeader()
+            }).then(function (data) {
+              console.log(data);
+              point.videosId = data.body.videos;
+              point.videosId.forEach(function (videosId) {
+                that.videos.push({pointId: point.pointId, videoId: videosId.id, mini: "http://videopromotion.club/assets/images/default-video-thumbnail.jpg"});
+                that.videos.sort(function(a, b){
+                  if(a.videoId < b.videoId) return -1;
+                  if(a.videoId > b.videoId) return 1;
+                  return 0;
+                });
+
+              });
+
+            });
+          });
+        });
+
+
+      },
+      getData: function () {
+        var url = 'http://routeapi.azurewebsites.net/route/' + this.$parent.$data.actualtripId + '/point';
+        this.$http.get(url, {
           headers: auth.getAuthHeader()
         }).then(function (data) {
           this.points = data.body.points;
 
           var tab = [];
-          this.points.forEach(function(point){
+          this.points.forEach(function (point) {
             tab.push(
               {
                 position: {
-                lat: point.latitudecoord_x,
-                lng: point.longitudecoord_y
-              },
+                  lat: point.latitudecoord_x,
+                  lng: point.longitudecoord_y
+                },
                 label: point.pointId.toString(),
               }
-            )});
-          this.markers= tab;
-          if(this.markers.length > 1) {
+            )
+          });
+          this.markers = tab;
+          if (this.markers.length > 1) {
             this.center = {lat: this.markers[0].position.lat, lng: this.markers[0].position.lng};
           }
           this.makePaths();
           this.getPhotoList();
+          this.getVideoList();
         });
-        },
+      },
 
       makePaths() {
         var localpath = [];
@@ -186,9 +182,6 @@
         });
         this.path = localpath;
       },
-
-
-
 
 
       setPlace(place) {
@@ -211,11 +204,45 @@
 
         });
       },
-      clickPhoto: function (index) {
-        window.open(this.photos[index].blob);
+      clickPhoto: function (index,d) {
+        fetch('http://routeapi.azurewebsites.net/route/' + this.$parent.$data.actualtripId + '/point/'
+          + this.photos[d.photoId].pointId + '/photo/' + d.photoId, {
+          headers: auth.getAuthHeader()
+        })
+          .then((response) => response.blob())
+          .then((blob) => {
+            var img = new Image();
+            img.src = URL.createObjectURL(blob);
+            var w = window.open("");
+            w.document.write(img.outerHTML);
+          });
       },
-      clickVideo: function (index) {
-        window.open(this.videos[index].blob);
+      clickVideo: function (index,d) {
+        fetch('http://routeapi.azurewebsites.net/route/' + this.$parent.$data.actualtripId + '/point/'
+          + this.videos[d.videoId].pointId + '/video/' + d.videoId, {
+          headers: auth.getAuthHeader()
+        })
+          .then((response) => response.blob())
+          .then((blob) => {
+
+            var video = document.createElement("video");
+            video.controls = true;
+            video.style = "max-width: 80%;min-width: 30%;";
+            video.src = URL.createObjectURL(blob);
+            var w = window.open("");
+            w.document.write(video.outerHTML);
+
+
+
+//            var url = URL.createObjectURL(blob);
+//            var a = document.createElement("a");
+//            document.body.appendChild(a);
+//            a.style = "display: none";
+//            a.href = url;
+//            a.download = "video.mp4";
+//            a.click();
+//            window.URL.revokeObjectURL(url);
+          });
       },
 
       toggleInfoWindow: function (marker, idx) {
@@ -224,12 +251,12 @@
         this.infoContentVideos = [];
         for (i = 0; i < this.photos.length; i++) {
           if (idx == this.photos[i].pointId) {
-            this.infoContentPhotos.push(this.photos[i].mini);
+            this.infoContentPhotos.push(this.photos[i]);
           }
         }
         for (i = 0; i < this.videos.length; i++) {
           if (idx == this.videos[i].pointId) {
-            this.infoContentVideos.push(this.videos[i].mini);
+            this.infoContentVideos.push(this.videos[i]);
           }
         }
 
@@ -252,7 +279,7 @@
 
 <style>
   td > img {
-    max-height: 18vh;
+    height: 15vh;
     padding: 10px 4px;
     opacity: 0.8;
     transition: .5s ease;

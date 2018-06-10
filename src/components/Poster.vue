@@ -1,16 +1,19 @@
 <template>
-    <div class="poster col-xs-8 col-xs-offset-2">
-      <div class="menu col-xs-12">
+  <div class="poster col-xs-8 col-xs-offset-2">
+    <div class="menu col-xs-12">
 
       <br/>
       <h2>Poster generate</h2>
+      <img style="width:100%" id="posterimg"/>
+      <button id="downloadButton" class="btn btn-primary" style="margin:15px; display: none" @click="downloadPoster()">download</button>
+
       <div id="loader-wrapper">
         <div id="loader"></div>
+        <h3>Please wait, your poster is being generated</h3>
+        <h4>Usually, it takes a few seconds...</h4>
       </div>
 
     </div>
-    <h3>Please wait, your poster is being generated</h3>
-    <h4>Usually, it takes a few seconds...</h4>
   </div>
 </template>
 
@@ -23,10 +26,31 @@
     },
     methods: {
       generatePosterJSON() {
-      },
-      showPoster() {
+        this.$http.post('http://routeapi.azurewebsites.net/route/' + this.$parent.$data.actualtripId + '/poster', {
+          headers: auth.getAuthHeader()
+        }).then(setTimeout(this.getPoster(), 1000));
       },
 
+      getPoster() {
+        fetch('http://routeapi.azurewebsites.net/route/' + this.$parent.$data.actualtripId + '/poster', {
+          headers: auth.getAuthHeader()
+        })
+          .then((response) => response.blob())
+          .then((blob) => {
+            var imageUrl = URL.createObjectURL(blob);
+            document.getElementById("posterimg").src = imageUrl;
+            document.getElementById("loader-wrapper").style.display = "none";
+            document.getElementById("downloadButton").style.display = "inline";
+          });
+      },
+      downloadPoster() {
+        var link = document.createElement('a');
+        link.href = document.getElementById("posterimg").src;
+        link.download = 'Poster.jpg';
+        link.style = "display: none";
+        document.body.appendChild(link);
+        link.click();
+      }
     },
     beforeMount() {
       this.generatePosterJSON();

@@ -4,13 +4,17 @@
 
       <br/>
       <h2>Presentation generate</h2>
+      <video id="presentationsrc" controls style="max-width:100%; display: none">
+      </video>
+      <button id="downloadButton" class="btn btn-primary" style="margin:15px; display: none" @click="downloadPresentation()">download</button>
+
       <div id="loader-wrapper">
         <div id="loader"></div>
+        <h3>Please wait, your presentation is being generated</h3>
+        <h4>With longer trips it may take a few minutes...</h4>
       </div>
 
     </div>
-    <h3>Please wait, your presentation is being generated</h3>
-    <h4>With longer trips it may take a few minutes...</h4>
   </div>
 </template>
 
@@ -24,9 +28,33 @@
     },
     methods: {
       generatePresentationJSON() {
+        this.$http.post('http://routeapi.azurewebsites.net/route/' + this.$parent.$data.actualtripId + '/presentation', {
+          headers: auth.getAuthHeader()
+        }).then(setTimeout(this.getPresentation(), 1000));
+
       },
-      showPresentation() {
+      getPresentation() {
+        fetch('http://routeapi.azurewebsites.net/route/' + this.$parent.$data.actualtripId + '/presentation', {
+          headers: auth.getAuthHeader()
+        })
+          .then((response) => response.blob())
+          .then((blob) => {
+            var imageUrl = URL.createObjectURL(blob);
+            document.getElementById("presentationsrc").src = imageUrl;
+            document.getElementById("presentationsrc").style.display = "inline";
+            document.getElementById("loader-wrapper").style.display = "none";
+            document.getElementById("downloadButton").style.display = "inline";
+          });
       },
+
+      downloadPresentation() {
+        var link = document.createElement('a');
+        link.href = document.getElementById("presentationsrc").src;
+        link.download = 'Presentation.mp4';
+        link.style = "display: none";
+        document.body.appendChild(link);
+        link.click();
+      }
 
     },
     beforeMount() {

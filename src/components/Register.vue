@@ -1,5 +1,7 @@
 <template>
   <div class = "login">
+    <h2>Sign Up</h2>
+    <p>Create a new account</p>
    <div class="login col-sm-4 col-sm-offset-4">
      <vue-form-generator :schema="schema" :model="model" :options="formOptions"></vue-form-generator>
    </div>
@@ -36,7 +38,7 @@
              disabled: false,
              min: 5,
              max: 40,
-             placeholder: "nazwa użytkownika",
+             placeholder: "user's login",
              validator: VueFormGenerator.validators.string
            },
            {
@@ -50,7 +52,7 @@
              disabled: false,
              min: 5,
              max: 40,
-             placeholder: "hasło",
+             placeholder: "user's password",
              validator: VueFormGenerator.validators.string
            },
            {
@@ -64,12 +66,12 @@
              disabled: false,
              min: 5,
              max: 40,
-             placeholder: "e-mail",
+             placeholder: "user's e-mail",
              validator: VueFormGenerator.validators.email
            },
            {
              type: "submit",
-             buttonText: "Rejestracja",
+             buttonText: "Sign up",
              onSubmit: this.submitForm,
              disabled() {
                return this.errors.length > 0;
@@ -77,7 +79,7 @@
            },
            {
              type: "submit",
-             buttonText: "Anuluj",
+             buttonText: "Cancel",
              onSubmit: this.back,
              disabled() {
                return this.errors.length > 0;
